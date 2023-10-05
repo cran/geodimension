@@ -1,3 +1,7 @@
+# geodimension 1.0.1
+* Update documentation and website.
+* Use core pipe operator.
+
 # geodimension 1.0.0
 * Initial functionality.
 * Functions to define levels in a dimension with geographic information.
