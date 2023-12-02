@@ -8,7 +8,10 @@
 [![CRAN
 status](https://www.r-pkg.org/badges/version/geodimension)](https://CRAN.R-project.org/package=geodimension)
 [![R-CMD-check](https://github.com/josesamos/geodimension/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/josesamos/geodimension/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/josesamos/geodimension/branch/master/graph/badge.svg)](https://app.codecov.io/gh/josesamos/geodimension?branch=master)
 [![Downloads](http://cranlogs.r-pkg.org/badges/geodimension?color=brightgreen)](https://www.r-pkg.org:443/pkg/geodimension)
+[![Downloads](http://cranlogs.r-pkg.org/badges/grand-total/geodimension?color=brightgreen)](https://www.r-pkg.org:443/pkg/geodimension)
 <!-- badges: end -->
 
 The *geographic dimension* plays a fundamental role in multidimensional
@@ -177,7 +180,7 @@ ll <- gd |>
   get_level_layer(level_name = "state",
                   only_key = TRUE)
 
-plot(ll)
+plot(sf::st_shift_longitude(ll))
 ```
 
 <img src="man/figures/README-unnamed-chunk-6-1.png" width="100%" />

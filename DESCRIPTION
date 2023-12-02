@@ -1,7 +1,7 @@
 Type: Package
 Package: geodimension
 Title: Definition of Geographic Dimensions
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: 
     person("Jose", "Samos", , "jsamos@ugr.es", role = c("aut", "cre", "cph"),
            comment = c(ORCID = "0000-0002-4457-3439"))
@@ -28,8 +28,8 @@ Language: en-GB
 LazyData: true
 RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2023-10-05 17:16:26 UTC; joses
+Packaged: 2023-12-02 08:06:28 UTC; joses
 Author: Jose Samos [aut, cre, cph] (<https://orcid.org/0000-0002-4457-3439>)
 Maintainer: Jose Samos <jsamos@ugr.es>
 Repository: CRAN
-Date/Publication: 2023-10-05 20:20:02 UTC
+Date/Publication: 2023-12-02 08:20:02 UTC
