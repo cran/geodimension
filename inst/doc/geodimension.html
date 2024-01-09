@@ -353,21 +353,22 @@ structured in facts and dimensions<a href="#fn1" class="footnote-ref" id="fnref1
 fundamental role in multidimensional systems. Apart from the analysis
 possibilities it offers, like any other dimension, it is very
 interesting to have the possibility of representing the reports obtained
-from multidimensional systems, using their geographic dimensions, on a
+from multidimensional systems, using their geographic dimensions on a
 map, or performing spatial analysis on them. This functionality is
-supported by package <a href="https://CRAN.R-project.org/package=geomultistar"><code>geomultistar</code></a>.</p>
+supported by packages <a href="https://cran.r-project.org/package=rolap"><code>rolap</code></a>
+and <a href="https://cran.r-project.org/package=geomultistar"><code>geomultistar</code></a>.</p>
 <p>To define a geographic dimension in a star schema, we need a table
 with attributes corresponding to the levels of the dimension.
 Additionally, we will also need one or more geographic layers to
 represent the data using this dimension. We can obtain this data from
 available vector layers of geographic information. In simple cases, one
-layer is enough; but we often need several layers related to each other.
-The relationships can be defined by common attribute values or can be
+layer is enough. We often need several layers related to each other. The
+relationships can be defined by common attribute values or can be
 inferred from the respective geographic information.</p>
 <p>The main objective of this package is to support the definition of
 geographic dimensions from layers of geographic information that can be
-used in multidimensional systems. In particular, through package <a href="https://cran.r-project.org/package=geomultistar"><code>geomultistar</code></a>
-they can be used directly.</p>
+used in multidimensional systems. In particular, through packages <a href="https://cran.r-project.org/package=rolap"><code>rolap</code></a>
+and <a href="https://cran.r-project.org/package=geomultistar"><code>geomultistar</code></a>.</p>
 <p>The rest of this document is structured as follows: First, an
 illustrative example of how the package works is developed. Then, the
 document ends with conclusions.</p>
@@ -375,25 +376,136 @@ document ends with conclusions.</p>
 <div id="an-illustrative-example" class="section level1">
 <h1>An illustrative example</h1>
 <p>Suppose we have a multidimensional design on US data and the
-geographic dimension is defined at the <em>city</em> level. For each
-city we have its name and the code of the state in which it is located.
+geographic dimension is defined at the <em>place</em> level. For each
+place we have its name and the code of the state in which it is located.
 It would be interesting to have other levels of detail in this dimension
-to be able to perform roll-up operations.</p>
+to be able to perform <em>roll-up</em> operations.</p>
 <p>With this objective, we look for layers of geographic information. In
 <a href="https://www.census.gov">United States Census Bureau</a> we find
 layers at various levels of detail, including <em>place</em>,
-<em>county</em>, <em>state</em>, <em>region</em>, <em>division</em> and
-<em>nation</em>. We have obtained them (for <em>place</em> we have
-selected only the cities) and we have stored<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a> them in
-<code>layer_us_city</code>, <code>layer_us_county</code>,
-<code>layer_us_state</code>, <code>layer_us_region</code>,
-<code>layer_us_division</code> and <code>layer_us_nation</code>,
-respectively.</p>
-<p>The layers are related to each other. In some cases they have
-attributes in common, in others, although there is a relationship, it is
-not explicitly defined. We can use <code>geodimension</code> to support
-the definition of these relationships. Once defined, it will also offer
-us support to exploit them and obtain information from them.</p>
+<em>county</em> and <em>state</em>. Furthermore we find the
+relationships in table form between <em>division</em>, <em>region</em>
+and <em>country</em>. For this example we obtain them from the package
+itself (we could read them from a <em>GeoPackage</em> or in any other
+format using the <a href="https://cran.r-project.org/package=sf"><code>sf</code></a>
+package).</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(geodimension)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a>layer_us_place <span class="ot">&lt;-</span> gd_us <span class="sc">|&gt;</span></span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a>  <span class="fu">get_level_layer</span>(<span class="st">&quot;place&quot;</span>)</span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>layer_us_county <span class="ot">&lt;-</span></span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">inner_join</span>(</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>    <span class="fu">get_level_data_geo</span>(gd_us, <span class="st">&quot;county&quot;</span>),</span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a>    <span class="fu">get_level_layer</span>(gd_us, <span class="st">&quot;county&quot;</span>),</span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;geoid&quot;</span>, <span class="st">&quot;statefp&quot;</span>, <span class="st">&quot;name&quot;</span>, <span class="st">&quot;type&quot;</span>)</span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>  sf<span class="sc">::</span><span class="fu">st_as_sf</span>()</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>layer_us_state <span class="ot">&lt;-</span></span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">inner_join</span>(</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>    <span class="fu">get_level_data_geo</span>(gd_us, <span class="st">&quot;state&quot;</span>),</span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>    <span class="fu">get_level_layer</span>(gd_us, <span class="st">&quot;state&quot;</span>),</span>
+<span id="cb1-18"><a href="#cb1-18" tabindex="-1"></a>    <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;statefp&quot;</span>, <span class="st">&quot;division&quot;</span>, <span class="st">&quot;region&quot;</span>, <span class="st">&quot;stusps&quot;</span>, <span class="st">&quot;name&quot;</span>)</span>
+<span id="cb1-19"><a href="#cb1-19" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb1-20"><a href="#cb1-20" tabindex="-1"></a>  sf<span class="sc">::</span><span class="fu">st_as_sf</span>()</span></code></pre></div>
+<p>The content of variable <code>us_division</code> is shown below.</p>
+<table>
+<colgroup>
+<col width="21%" />
+<col width="28%" />
+<col width="18%" />
+<col width="18%" />
+<col width="13%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">division_code</th>
+<th align="center">division_name</th>
+<th align="center">region_code</th>
+<th align="center">region_name</th>
+<th align="center">country</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">1</td>
+<td align="center">New England</td>
+<td align="center">1</td>
+<td align="center">Northeast</td>
+<td align="center">USA</td>
+</tr>
+<tr class="even">
+<td align="center">2</td>
+<td align="center">Middle Atlantic</td>
+<td align="center">1</td>
+<td align="center">Northeast</td>
+<td align="center">USA</td>
+</tr>
+<tr class="odd">
+<td align="center">3</td>
+<td align="center">East North Central</td>
+<td align="center">2</td>
+<td align="center">Midwest</td>
+<td align="center">USA</td>
+</tr>
+<tr class="even">
+<td align="center">4</td>
+<td align="center">West North Central</td>
+<td align="center">2</td>
+<td align="center">Midwest</td>
+<td align="center">USA</td>
+</tr>
+<tr class="odd">
+<td align="center">5</td>
+<td align="center">South Atlantic</td>
+<td align="center">3</td>
+<td align="center">South</td>
+<td align="center">USA</td>
+</tr>
+<tr class="even">
+<td align="center">6</td>
+<td align="center">East South Central</td>
+<td align="center">3</td>
+<td align="center">South</td>
+<td align="center">USA</td>
+</tr>
+<tr class="odd">
+<td align="center">7</td>
+<td align="center">West South Central</td>
+<td align="center">3</td>
+<td align="center">South</td>
+<td align="center">USA</td>
+</tr>
+<tr class="even">
+<td align="center">8</td>
+<td align="center">Mountain</td>
+<td align="center">4</td>
+<td align="center">West</td>
+<td align="center">USA</td>
+</tr>
+<tr class="odd">
+<td align="center">9</td>
+<td align="center">Pacific</td>
+<td align="center">4</td>
+<td align="center">West</td>
+<td align="center">USA</td>
+</tr>
+<tr class="even">
+<td align="center">0</td>
+<td align="center">Puerto Rico</td>
+<td align="center">9</td>
+<td align="center">Puerto Rico</td>
+<td align="center">USA</td>
+</tr>
+</tbody>
+</table>
+<p>The layers and the table are related to each other. In some cases
+they have attributes in common, in others, although there is a
+relationship, it may not be explicitly defined. We can use
+<code>geodimension</code> to support the definition of these
+relationships. Once defined, it will also offer us support to exploit
+them and obtain information from them.</p>
 <p>Thus, three phases can be distinguished:</p>
 <ul>
 <li><p>Definition of levels.</p></li>
@@ -402,114 +514,143 @@ us support to exploit them and obtain information from them.</p>
 </ul>
 <div id="definition-of-levels" class="section level2">
 <h2>Definition of levels</h2>
-<p>Each of the layers that we have obtained represents a conceptual
-level of the geographical dimension, in the package it is called
-<code>geolevel</code>. To define a <code>geolevel</code>, we need a
-layer and the set of attributes that make up the layer’s key (which
-uniquely identify each of its instances).</p>
+<p>In the package, each conceptual level of the geographical dimension
+is called <code>geolevel</code>. To define a <code>geolevel</code>, we
+need a layer and the set of attributes that make up the layer’s key
+(which uniquely identify each of its instances).</p>
 <p>We can previously check if a set of attributes form a key of the
-layer using the <code>check_key</code> function.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(geodimension)</span>
-<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a></span>
-<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">names</span>(layer_us_city)</span>
-<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;statefp&quot;      &quot;placefp&quot;      &quot;placens&quot;      &quot;geoid&quot;        &quot;name&quot;        </span></span>
-<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co">#&gt;  [6] &quot;namelsad&quot;     &quot;lsad&quot;         &quot;classfp&quot;      &quot;pcicbsa&quot;      &quot;pcinecta&quot;    </span></span>
-<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a><span class="co">#&gt; [11] &quot;mtfcc&quot;        &quot;funcstat&quot;     &quot;aland&quot;        &quot;awater&quot;       &quot;shape_length&quot;</span></span>
-<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="co">#&gt; [16] &quot;shape_area&quot;   &quot;geoid_data&quot;   &quot;geometry&quot;</span></span>
-<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
-<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="fu">check_key</span>(layer_us_city, <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;name&quot;</span>, <span class="st">&quot;statefp&quot;</span>))</span>
-<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
-<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a></span>
-<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a><span class="fu">check_key</span>(layer_us_city, <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;geoid&quot;</span>))</span>
-<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>We might expect the city name (<code>name</code>) and state code
-(<code>statefp</code>) to be sufficient to identify a city, however,
-they are not<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a>. We check that the <code>geoid</code> field
-is a valid key, therefore, it will be the one we use to define the
+layer using the <code>check_key()</code> function.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">names</span>(layer_us_place)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;geoid&quot;        &quot;statefp&quot;      &quot;county_geoid&quot; &quot;name&quot;         &quot;type&quot;        </span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co">#&gt; [6] &quot;geom&quot;</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">check_key</span>(layer_us_place, <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;name&quot;</span>, <span class="st">&quot;statefp&quot;</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">check_key</span>(layer_us_place, <span class="at">key =</span> <span class="st">&quot;geoid&quot;</span>)</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>We might expect the place name (<code>name</code>) and state code
+(<code>statefp</code>) to be sufficient to identify a place, however,
+they are not. We check that the <code>geoid</code> field is a valid key,
+therefore, it will be the one we use to define the
 <code>geolevel</code>.</p>
 <p>We can check the geometry that is considered for the definition of
-the level by means of the <code>get_geometry</code> function (it
-simplifies the types into three: <em>point</em>, <em>line</em>, and
+the level by means of the <code>get_geometry()</code> function (it
+simplifies the types into <em>point</em>, <em>line</em> and
 <em>polygon</em>). In addition, we give each level a name to be able to
 refer to it, as shown below.</p>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">get_geometry</span>(layer_us_city)</span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;point&quot;</span></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>city <span class="ot">&lt;-</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;city&quot;</span>,</span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_city,</span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a>           <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;geoid&quot;</span>))</span></code></pre></div>
-<p>For <code>county</code> it is the same as for <code>city</code>, the
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">get_geometry</span>(layer_us_place)</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;point&quot;</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>place <span class="ot">&lt;-</span></span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;place&quot;</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_place,</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>           <span class="at">key =</span> <span class="st">&quot;geoid&quot;</span>)</span></code></pre></div>
+<p>For <code>county</code> it is the same as for <code>place</code>, the
 name and the code of the state do not compose a valid key. In this case,
 the geometry is polygon. Additionally, a layer with another geometry can
-be associated using the <code>add_geometry</code> function or, in the
-case of point-type geometry, it can be generated from the polygon layer
-using the <code>complete_point_geometry</code> function, as is done
-below.</p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">get_geometry</span>(layer_us_county)</span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; [1] &quot;polygon&quot;</span></span>
-<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a></span>
-<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>county <span class="ot">&lt;-</span></span>
-<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;county&quot;</span>,</span>
-<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_county,</span>
-<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>           <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;geoid&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a>  <span class="fu">complete_point_geometry</span>()</span></code></pre></div>
-<p>In the same way, the checks are made and the rest of the levels are
-defined. Although all the layers are of the polygon type, we generate
-the point layers only for those that we think may be needed.</p>
-<p>In some cases, latitude and longitude are stored as fields in the
-attribute table, from which we can generate a layer of points using the
-<code>coordinates_to_geometry</code> function. We can later associate
-that layer to the corresponding level using the
-<code>add_geometry</code> function mentioned above.</p>
-<p>Below is only the definition of the levels.</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>us_state_point <span class="ot">&lt;-</span></span>
-<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="fu">coordinates_to_geometry</span>(layer_us_state,</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>                          <span class="at">lon_lat =</span> <span class="fu">c</span>(<span class="st">&quot;intptlon&quot;</span>, <span class="st">&quot;intptlat&quot;</span>))</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a></span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>state <span class="ot">&lt;-</span></span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;state&quot;</span>,</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_state,</span>
-<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>           <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;statefp&quot;</span>)) <span class="sc">|&gt;</span></span>
-<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a>  <span class="fu">add_geometry</span>(<span class="at">layer =</span> us_state_point)</span>
-<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a></span>
-<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>region <span class="ot">&lt;-</span></span>
-<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;region&quot;</span>,</span>
-<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_region,</span>
-<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>           <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;regionce&quot;</span>))</span>
-<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a></span>
-<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a>division <span class="ot">&lt;-</span></span>
-<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;division&quot;</span>,</span>
-<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_division,</span>
-<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a>           <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;divisionce&quot;</span>))</span>
-<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a></span>
-<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a>nation <span class="ot">&lt;-</span></span>
-<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;nation&quot;</span>,</span>
-<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_nation,</span>
-<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a>           <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;name&quot;</span>))</span></code></pre></div>
+be associated using the <code>add_geometry()</code> function. Since the
+layer includes longitude and latitude, we can generate a geographic
+layer of points using the <code>coordinates_to_geometry()</code>
+function.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="fu">check_key</span>(layer_us_county, <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;name&quot;</span>, <span class="st">&quot;statefp&quot;</span>))</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; [1] FALSE</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="fu">check_key</span>(layer_us_county, <span class="at">key =</span> <span class="st">&quot;geoid&quot;</span>)</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; [1] TRUE</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="fu">get_geometry</span>(layer_us_county)</span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt; [1] &quot;polygon&quot;</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a>county <span class="ot">&lt;-</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;county&quot;</span>,</span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_county,</span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a>           <span class="at">key =</span> <span class="fu">c</span>(<span class="st">&quot;geoid&quot;</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a>  <span class="fu">add_geometry</span>(<span class="fu">coordinates_to_geometry</span>(layer_us_county))</span></code></pre></div>
+<p>For <em>state</em> the situation is similar to the previous
+cases.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>us_state_point <span class="ot">&lt;-</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="fu">coordinates_to_geometry</span>(layer_us_state,</span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>                          <span class="at">lon_lat =</span> <span class="fu">c</span>(<span class="st">&quot;intptlon&quot;</span>, <span class="st">&quot;intptlat&quot;</span>))</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>state <span class="ot">&lt;-</span></span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="fu">geolevel</span>(<span class="at">name =</span> <span class="st">&quot;state&quot;</span>,</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>           <span class="at">layer =</span> layer_us_state,</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>           <span class="at">key =</span> <span class="st">&quot;statefp&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="fu">add_geometry</span>(<span class="at">layer =</span> us_state_point)</span></code></pre></div>
+<p>For both <em>county</em> and <em>state</em>, fields with longitude
+and latitude were available. If we only have the <em>polygon</em>
+geometry, we can obtain the <em>point</em> geometry using the
+<code>complete_point_geometry()</code> function.</p>
+<p>For the rest of the levels, we do not have a layer with specific
+geographic information, but we can obtain it from the previous layers.
+Below is only the definition of the levels.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>division <span class="ot">&lt;-</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="fu">geolevel</span>(</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">&quot;division&quot;</span>,</span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>    <span class="at">layer =</span> us_division,</span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>    <span class="at">attributes =</span> <span class="fu">c</span>(<span class="st">&quot;country&quot;</span>, <span class="st">&quot;region_code&quot;</span>, <span class="st">&quot;division_name&quot;</span>),</span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>    <span class="at">key =</span> <span class="st">&quot;division_code&quot;</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="fu">add_geometry</span>(<span class="at">layer =</span> layer_us_state,</span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>               <span class="at">layer_key =</span> <span class="st">&quot;division&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a>  <span class="fu">complete_point_geometry</span>()</span>
+<span id="cb6-11"><a href="#cb6-11" tabindex="-1"></a></span>
+<span id="cb6-12"><a href="#cb6-12" tabindex="-1"></a>region <span class="ot">&lt;-</span></span>
+<span id="cb6-13"><a href="#cb6-13" tabindex="-1"></a>  <span class="fu">geolevel</span>(</span>
+<span id="cb6-14"><a href="#cb6-14" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">&quot;region&quot;</span>,</span>
+<span id="cb6-15"><a href="#cb6-15" tabindex="-1"></a>    <span class="at">layer =</span> us_division,</span>
+<span id="cb6-16"><a href="#cb6-16" tabindex="-1"></a>    <span class="at">attributes =</span> <span class="fu">c</span>(<span class="st">&quot;country&quot;</span>, <span class="st">&quot;region_name&quot;</span>),</span>
+<span id="cb6-17"><a href="#cb6-17" tabindex="-1"></a>    <span class="at">key =</span> <span class="st">&quot;region_code&quot;</span></span>
+<span id="cb6-18"><a href="#cb6-18" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb6-19"><a href="#cb6-19" tabindex="-1"></a>  <span class="fu">add_geometry</span>(<span class="at">layer =</span> layer_us_state,</span>
+<span id="cb6-20"><a href="#cb6-20" tabindex="-1"></a>               <span class="at">layer_key =</span> <span class="st">&quot;region&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb6-21"><a href="#cb6-21" tabindex="-1"></a>  <span class="fu">complete_point_geometry</span>()</span></code></pre></div>
+<p>For <em>division</em> and <em>region</em>, we define the level from
+the data table. Using the <code>add_geometry()</code> function, we add a
+layer of geographic information obtained from a finer granularity level
+of detail, which contains some field that relates them. Finally, we
+obtain the <em>point</em> type geometry from the previously defined
+<em>polygon</em> geometry.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>country <span class="ot">&lt;-</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="fu">geolevel</span>(</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>    <span class="at">name =</span> <span class="st">&quot;country&quot;</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>    <span class="at">layer =</span> <span class="fu">get_level_layer</span>(region),</span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>    <span class="at">attributes =</span> <span class="st">&quot;country&quot;</span>,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>    <span class="at">key =</span> <span class="st">&quot;country&quot;</span></span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a>  <span class="fu">complete_point_geometry</span>()</span></code></pre></div>
+<p>For <em>country</em>, since the state layer does not contain any
+field that directly relates to it, using the
+<code>get_level_layer()</code> function, we can obtain a new layer from
+any of the previously defined levels.</p>
 <p>Once the levels are defined, then we will define the dimension and
 the relationships between the levels.</p>
 </div>
 <div id="definition-of-relationships" class="section level2">
 <h2>Definition of relationships</h2>
 <p>To define a <code>geodimension</code>, we give it a name and start
-from any <code>geolevel</code>. Next, we add the rest of the
+from any <code>geolevel</code>. If we want the names to follow the snake
+case criteria, we can indicate this using the
+<code>snake_case = TRUE</code> parameter and the conversion will be
+performed automatically for all operations. Next, we add the rest of the
 <code>geolevels</code> in any order.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span></span>
-<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>  <span class="fu">geodimension</span>(<span class="at">name =</span> <span class="st">&quot;gd_us&quot;</span>,</span>
-<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a>               <span class="at">level =</span> region) <span class="sc">|&gt;</span></span>
-<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a>  <span class="fu">add_level</span>(division) <span class="sc">|&gt;</span></span>
-<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a>  <span class="fu">add_level</span>(state) <span class="sc">|&gt;</span></span>
-<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="fu">add_level</span>(nation) <span class="sc">|&gt;</span></span>
-<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="fu">add_level</span>(city) <span class="sc">|&gt;</span></span>
-<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="fu">add_level</span>(county)</span></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="fu">geodimension</span>(<span class="at">name =</span> <span class="st">&quot;gd_us&quot;</span>,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>               <span class="at">level =</span> region,</span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>               <span class="at">snake_case =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>  <span class="fu">add_level</span>(division) <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>  <span class="fu">add_level</span>(state) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a>  <span class="fu">add_level</span>(country) <span class="sc">|&gt;</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a>  <span class="fu">add_level</span>(place) <span class="sc">|&gt;</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a>  <span class="fu">add_level</span>(county)</span></code></pre></div>
 <p>Next, we can define the relationships that we want to consider
 between the levels. In a relationship there are two parts, the <em>lower
 level</em> and the <em>upper level</em>. To define the relationships,
 the following points must be taken into account:</p>
 <ul>
-<li><p>There are no restrictions on the relationships you define, as
-long as the relationship can be established.</p></li>
+<li><p>There are no restrictions on the relationships we define, as long
+as the relationship can be established.</p></li>
 <li><p>It is only necessary to define direct relationships (from them,
 indirect ones are derived).</p></li>
 <li><p>Relationships can be defined using attributes with common values
@@ -519,142 +660,66 @@ instances.</p></li>
 must form a valid key for the level (it does not necessarily have to be
 the key that was indicated when defining it, this is used by
 default).</p></li>
-<li><p>Currently, to define a relationship using geographic properties,
-the upper level must be of type polygon.</p></li>
+<li><p>To define a relationship using geographic properties, the upper
+level must be of type <em>polygon</em>.</p></li>
 </ul>
 <p>The relationships between <em>state</em>, <em>region</em>,
-<em>division</em> and <em>nation</em> are defined below.</p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
-<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a>                <span class="at">lower_level_attributes =</span> <span class="fu">c</span>(<span class="st">&quot;division&quot;</span>),</span>
-<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;division&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;division&quot;</span>,</span>
-<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;region&quot;</span>,</span>
-<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a>                <span class="at">by_geography =</span> <span class="cn">TRUE</span>) <span class="sc">|&gt;</span></span>
-<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;region&quot;</span>,</span>
-<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;nation&quot;</span>)</span></code></pre></div>
+<em>division</em> and <em>country</em> are defined below.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="fu">relate_levels</span>(</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>    <span class="at">lower_level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>    <span class="at">lower_level_attributes =</span> <span class="st">&quot;division&quot;</span>,</span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>    <span class="at">upper_level_name =</span> <span class="st">&quot;division&quot;</span></span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a>  <span class="fu">relate_levels</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a>    <span class="at">lower_level_name =</span> <span class="st">&quot;division&quot;</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>    <span class="at">lower_level_attributes =</span> <span class="st">&quot;region_code&quot;</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>    <span class="at">upper_level_name =</span> <span class="st">&quot;region&quot;</span></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a>  <span class="fu">relate_levels</span>(</span>
+<span id="cb9-13"><a href="#cb9-13" tabindex="-1"></a>    <span class="at">lower_level_name =</span> <span class="st">&quot;region&quot;</span>,</span>
+<span id="cb9-14"><a href="#cb9-14" tabindex="-1"></a>    <span class="at">lower_level_attributes =</span> <span class="st">&quot;country&quot;</span>,</span>
+<span id="cb9-15"><a href="#cb9-15" tabindex="-1"></a>    <span class="at">upper_level_name =</span> <span class="st">&quot;country&quot;</span></span>
+<span id="cb9-16"><a href="#cb9-16" tabindex="-1"></a>  )</span></code></pre></div>
 <p>The relationship between <em>state</em> and <em>division</em> is
-defined by a <em>state</em> attribute that matches the <em>division</em>
-key.</p>
-<p>The relationship between <em>division</em> and <em>region</em> is
-defined by geographic relationship because they do not have any
-attributes in common.</p>
-<p>Finally, as <em>nation</em> has only one instance, it relates
-directly to all instances of the indicated level (in this case,
-<em>region</em>), no additional relationship is required.</p>
-<p>In addition to these relationships there is a clear relationship
-between <em>city</em> and <em>state</em> and also between
-<em>county</em> and <em>state</em>. In both cases it can be defined by
-attributes.</p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;city&quot;</span>,</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                <span class="at">lower_level_attributes =</span> <span class="fu">c</span>(<span class="st">&quot;statefp&quot;</span>),</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;state&quot;</span>) <span class="sc">|&gt;</span></span>
-<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;county&quot;</span>,</span>
-<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>                <span class="at">lower_level_attributes =</span> <span class="fu">c</span>(<span class="st">&quot;statefp&quot;</span>),</span>
-<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;state&quot;</span>)</span></code></pre></div>
-<p>The relationship between <em>city</em> and <em>county</em> is a bit
-fuzzy (at least for me), it depends on the state, the city and also the
-county. In any case, if we are interested in establishing a
-relationship, we could define it between <em>city</em> and
-<em>state</em> using the geographical properties of the levels, since
-county includes polygon-type geometry.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;city&quot;</span>,</span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;county&quot;</span>,</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>                <span class="at">by_geography =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+defined by a <em>state</em> attribute (<code>division</code>) that
+matches the <em>division</em> key. In the same way, the relationships
+between <em>division</em> and <em>region</em>, and <em>region</em> and
+<em>country</em> are defined.</p>
+<p>In addition to these relationships there is a relationship between
+<em>place</em> and <em>state</em> and also between <em>county</em> and
+<em>state</em>. In both cases it can be defined by attributes.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="fu">relate_levels</span>(</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>    <span class="at">lower_level_name =</span> <span class="st">&quot;place&quot;</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>    <span class="at">lower_level_attributes =</span> <span class="st">&quot;county_geoid&quot;</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>    <span class="at">upper_level_name =</span> <span class="st">&quot;county&quot;</span></span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a>  <span class="fu">relate_levels</span>(</span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a>    <span class="at">lower_level_name =</span> <span class="st">&quot;county&quot;</span>,</span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a>    <span class="at">lower_level_attributes =</span> <span class="st">&quot;statefp&quot;</span>,</span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>    <span class="at">upper_level_name =</span> <span class="st">&quot;state&quot;</span></span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a>  )</span></code></pre></div>
+<p>In this case, we have attributes to establish the relationships. In
+some cases, we can resort to the geographical relationships that exist
+between the levels. For example, to relate <em>place</em> and
+<em>county</em>, using the <code>relate_levels()</code> function with
+the parameter <code>by_geography = TRUE</code>, a field is created at
+the lowest level that reflects the geographical relationship
+obtained.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>gd_2 <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;place&quot;</span>,</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;county&quot;</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>                <span class="at">by_geography =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <p>We can check if all the instances have been related using the
-following function:</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="fu">nrow</span>(</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  gd <span class="sc">|&gt;</span> <span class="fu">get_unrelated_instances</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;city&quot;</span>,</span>
-<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>                                 <span class="at">upper_level_name =</span> <span class="st">&quot;county&quot;</span>)</span>
-<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>)</span>
-<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
-<p>Since there are no unrelated instances, each city has been linked to
-the county whose boundaries contain it.</p>
-<p>If we did a similar check for each defined relation, we would observe
-that all the instances of the lower levels have been related to those of
-the higher levels, except for the following:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">nrow</span>(</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  gd <span class="sc">|&gt;</span> <span class="fu">get_unrelated_instances</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>                                 <span class="at">upper_level_name =</span> <span class="st">&quot;division&quot;</span>)</span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>)</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
-<p>If we look at the content:</p>
-<table>
-<colgroup>
-<col width="5%" />
-<col width="4%" />
-<col width="4%" />
-<col width="5%" />
-<col width="5%" />
-<col width="3%" />
-<col width="4%" />
-<col width="6%" />
-<col width="3%" />
-<col width="3%" />
-<col width="5%" />
-<col width="5%" />
-<col width="5%" />
-<col width="6%" />
-<col width="7%" />
-<col width="7%" />
-<col width="6%" />
-<col width="6%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th align="center">state_key</th>
-<th align="center">statefp</th>
-<th align="center">region</th>
-<th align="center">division</th>
-<th align="center">statens</th>
-<th align="center">geoid</th>
-<th align="center">stusps</th>
-<th align="center">name</th>
-<th align="center">lsad</th>
-<th align="center">mtfcc</th>
-<th align="center">funcstat</th>
-<th align="center">aland</th>
-<th align="center">awater</th>
-<th align="center">intptlat</th>
-<th align="center">intptlon</th>
-<th align="center">shape_length</th>
-<th align="center">shape_area</th>
-<th align="center">geoid_data</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="center">52</td>
-<td align="center">72</td>
-<td align="center">9</td>
-<td align="center">0</td>
-<td align="center">01779808</td>
-<td align="center">72</td>
-<td align="center">PR</td>
-<td align="center">Puerto Rico</td>
-<td align="center">00</td>
-<td align="center">G4000</td>
-<td align="center">A</td>
-<td align="center">8.869e+09</td>
-<td align="center">4.922e+09</td>
-<td align="center">+18.2176480</td>
-<td align="center">-066.4107992</td>
-<td align="center">7.428</td>
-<td align="center">1.178</td>
-<td align="center">04000US72</td>
-</tr>
-</tbody>
-</table>
-<p>The region or division code does not correspond to any of the
-existing ones. If we want to relate all the instances of <em>state</em>
-to the <em>nation</em> level, we must define the relationship explicitly
-(there are other solutions but we will not consider them here, in any
-case they can be generated from this one).</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>gd <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="fu">relate_levels</span>(<span class="at">lower_level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
-<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>                <span class="at">upper_level_name =</span> <span class="st">&quot;nation&quot;</span>)</span></code></pre></div>
+<code>get_unrelated_instances()</code> function:</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="fu">nrow</span>(<span class="fu">get_unrelated_instances</span>(gd_2,</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>                             <span class="at">lower_level_name =</span> <span class="st">&quot;place&quot;</span>,</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>                             <span class="at">upper_level_name =</span> <span class="st">&quot;county&quot;</span>))</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a><span class="co">#&gt; [1] 0</span></span></code></pre></div>
+<p>Since there are no unrelated instances, each instance of
+<em>place</em> has been linked to the <em>county</em> whose boundaries
+contain it.</p>
 <p>With these operations we have defined a
 <code>geodimension</code>.</p>
 </div>
@@ -665,80 +730,190 @@ or layer format, to define a geographic dimension in a star schema. We
 can also define new versions of the dimension.</p>
 <p>We can consult the levels of the <code>geodimension</code> using the
 following function:</p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>gd <span class="sc">|&gt;</span></span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="fu">get_level_names</span>()</span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;city&quot;     &quot;county&quot;   &quot;division&quot; &quot;nation&quot;   &quot;region&quot;   &quot;state&quot;</span></span></code></pre></div>
-<p>A new geodimension is defined by selecting a subset of levels, which
-we want to take into account when obtaining information, or to define
-new dimensions.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>gds <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="fu">select_levels</span>(<span class="at">level_names =</span> <span class="fu">c</span>(<span class="st">&quot;state&quot;</span>, <span class="st">&quot;division&quot;</span>, <span class="st">&quot;region&quot;</span>, <span class="st">&quot;nation&quot;</span>))</span>
-<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a></span>
-<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>gds <span class="sc">|&gt;</span></span>
-<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>  <span class="fu">get_level_names</span>()</span>
-<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;division&quot; &quot;nation&quot;   &quot;region&quot;   &quot;state&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>gd <span class="sc">|&gt;</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="fu">get_level_names</span>()</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;country&quot;  &quot;county&quot;   &quot;division&quot; &quot;place&quot;    &quot;region&quot;   &quot;state&quot;</span></span></code></pre></div>
+<p>A new <em>geodimension</em> is defined by selecting a subset of
+levels, which we want to take into account when obtaining information,
+or to define new dimensions. If necessary, relationships are generated
+between the selected levels: if there were indirect relationships
+defined between them that no longer exist when levels are deleted.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>gds <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="fu">select_levels</span>(<span class="at">level_names =</span> <span class="fu">c</span>(<span class="st">&quot;state&quot;</span>, <span class="st">&quot;division&quot;</span>, <span class="st">&quot;region&quot;</span>, <span class="st">&quot;country&quot;</span>))</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a></span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>gds <span class="sc">|&gt;</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>  <span class="fu">get_level_names</span>()</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a><span class="co">#&gt; [1] &quot;country&quot;  &quot;division&quot; &quot;region&quot;   &quot;state&quot;</span></span></code></pre></div>
 <p>From any level of the <code>geodimension</code>, a data table can be
 obtained that includes only the data of the level or all the data
-inherited from higher levels. For each level you can indicate whether or
+inherited from higher levels. For each level we can indicate whether or
 not a prefix is added to identify the origin of the fields. By default
-it is added, as you can see below.</p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>ld <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="fu">get_level_data</span>(<span class="at">level_name =</span> <span class="st">&quot;division&quot;</span>)</span>
-<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a><span class="fu">names</span>(ld)</span>
-<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;division_key&quot; &quot;divisionce&quot;   &quot;affgeoid&quot;     &quot;geoid&quot;        &quot;name&quot;        </span></span>
-<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a><span class="co">#&gt; [6] &quot;lsad&quot;         &quot;aland&quot;        &quot;awater&quot;</span></span>
-<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a></span>
-<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a>ld <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a>  <span class="fu">get_level_data</span>(<span class="at">level_name =</span> <span class="st">&quot;division&quot;</span>,</span>
-<span id="cb14-9"><a href="#cb14-9" tabindex="-1"></a>                 <span class="at">inherited =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb14-10"><a href="#cb14-10" tabindex="-1"></a><span class="fu">names</span>(ld)</span>
-<span id="cb14-11"><a href="#cb14-11" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;division_key&quot;      &quot;divisionce&quot;        &quot;affgeoid&quot;         </span></span>
-<span id="cb14-12"><a href="#cb14-12" tabindex="-1"></a><span class="co">#&gt;  [4] &quot;geoid&quot;             &quot;name&quot;              &quot;lsad&quot;             </span></span>
-<span id="cb14-13"><a href="#cb14-13" tabindex="-1"></a><span class="co">#&gt;  [7] &quot;aland&quot;             &quot;awater&quot;            &quot;NATION_nation_key&quot;</span></span>
-<span id="cb14-14"><a href="#cb14-14" tabindex="-1"></a><span class="co">#&gt; [10] &quot;NATION_name&quot;       &quot;NATION_affgeoid&quot;   &quot;NATION_geoid&quot;     </span></span>
-<span id="cb14-15"><a href="#cb14-15" tabindex="-1"></a><span class="co">#&gt; [13] &quot;REGION_region_key&quot; &quot;REGION_regionce&quot;   &quot;REGION_affgeoid&quot;  </span></span>
-<span id="cb14-16"><a href="#cb14-16" tabindex="-1"></a><span class="co">#&gt; [16] &quot;REGION_geoid&quot;      &quot;REGION_name&quot;       &quot;REGION_lsad&quot;      </span></span>
-<span id="cb14-17"><a href="#cb14-17" tabindex="-1"></a><span class="co">#&gt; [19] &quot;REGION_aland&quot;      &quot;REGION_awater&quot;</span></span></code></pre></div>
-<p>Previously, if we need it, we can obtain the name of the levels from
-which a level will inherit attributes.</p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>gd <span class="sc">|&gt;</span></span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="fu">get_higher_level_names</span>(<span class="at">level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
-<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>                         <span class="at">indirect_levels =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;division&quot; &quot;nation&quot;   &quot;region&quot;</span></span>
+it is added, as we can see below.</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>ld <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="fu">get_level_data</span>(<span class="at">level_name =</span> <span class="st">&quot;state&quot;</span>)</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a><span class="fu">names</span>(ld)</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;statefp&quot;  &quot;division&quot; &quot;region&quot;   &quot;stusps&quot;   &quot;name&quot;     &quot;intptlon&quot; &quot;intptlat&quot;</span></span>
 <span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a></span>
 <span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>ld <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
 <span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a>  <span class="fu">get_level_data</span>(<span class="at">level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
 <span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a>                 <span class="at">inherited =</span> <span class="cn">TRUE</span>)</span>
 <span id="cb15-9"><a href="#cb15-9" tabindex="-1"></a><span class="fu">names</span>(ld)</span>
-<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;state_key&quot;             &quot;statefp&quot;               &quot;region&quot;               </span></span>
-<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt;  [4] &quot;division&quot;              &quot;statens&quot;               &quot;geoid&quot;                </span></span>
-<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co">#&gt;  [7] &quot;stusps&quot;                &quot;name&quot;                  &quot;lsad&quot;                 </span></span>
-<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="co">#&gt; [10] &quot;mtfcc&quot;                 &quot;funcstat&quot;              &quot;aland&quot;                </span></span>
-<span id="cb15-14"><a href="#cb15-14" tabindex="-1"></a><span class="co">#&gt; [13] &quot;awater&quot;                &quot;intptlat&quot;              &quot;intptlon&quot;             </span></span>
-<span id="cb15-15"><a href="#cb15-15" tabindex="-1"></a><span class="co">#&gt; [16] &quot;shape_length&quot;          &quot;shape_area&quot;            &quot;geoid_data&quot;           </span></span>
-<span id="cb15-16"><a href="#cb15-16" tabindex="-1"></a><span class="co">#&gt; [19] &quot;DIVISION_division_key&quot; &quot;DIVISION_divisionce&quot;   &quot;DIVISION_affgeoid&quot;    </span></span>
-<span id="cb15-17"><a href="#cb15-17" tabindex="-1"></a><span class="co">#&gt; [22] &quot;DIVISION_geoid&quot;        &quot;DIVISION_name&quot;         &quot;DIVISION_lsad&quot;        </span></span>
-<span id="cb15-18"><a href="#cb15-18" tabindex="-1"></a><span class="co">#&gt; [25] &quot;DIVISION_aland&quot;        &quot;DIVISION_awater&quot;       &quot;NATION_nation_key&quot;    </span></span>
-<span id="cb15-19"><a href="#cb15-19" tabindex="-1"></a><span class="co">#&gt; [28] &quot;NATION_name&quot;           &quot;NATION_affgeoid&quot;       &quot;NATION_geoid&quot;         </span></span>
-<span id="cb15-20"><a href="#cb15-20" tabindex="-1"></a><span class="co">#&gt; [31] &quot;REGION_region_key&quot;     &quot;REGION_regionce&quot;       &quot;REGION_affgeoid&quot;      </span></span>
-<span id="cb15-21"><a href="#cb15-21" tabindex="-1"></a><span class="co">#&gt; [34] &quot;REGION_geoid&quot;          &quot;REGION_name&quot;           &quot;REGION_lsad&quot;          </span></span>
-<span id="cb15-22"><a href="#cb15-22" tabindex="-1"></a><span class="co">#&gt; [37] &quot;REGION_aland&quot;          &quot;REGION_awater&quot;</span></span></code></pre></div>
+<span id="cb15-10"><a href="#cb15-10" tabindex="-1"></a><span class="co">#&gt;  [1] &quot;statefp&quot;              &quot;state_division&quot;       &quot;state_region&quot;        </span></span>
+<span id="cb15-11"><a href="#cb15-11" tabindex="-1"></a><span class="co">#&gt;  [4] &quot;state_stusps&quot;         &quot;state_name&quot;           &quot;state_intptlon&quot;      </span></span>
+<span id="cb15-12"><a href="#cb15-12" tabindex="-1"></a><span class="co">#&gt;  [7] &quot;state_intptlat&quot;       &quot;division_country&quot;     &quot;division_region_code&quot;</span></span>
+<span id="cb15-13"><a href="#cb15-13" tabindex="-1"></a><span class="co">#&gt; [10] &quot;division_name&quot;        &quot;region_country&quot;       &quot;region_name&quot;</span></span></code></pre></div>
+<p>Previously, if we need it, we can obtain the name of the levels from
+which a level will inherit attributes.</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>gd <span class="sc">|&gt;</span></span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="fu">get_higher_level_names</span>(<span class="at">level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>                         <span class="at">indirect_levels =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="co">#&gt; [1] &quot;division&quot; &quot;region&quot;   &quot;country&quot;</span></span></code></pre></div>
+<p>If we need only part of the data, for example, instead of all the
+places only the cities, we can get the table, modify it and set it again
+to modify the level.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>ld_place <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>  <span class="fu">get_level_data</span>(<span class="at">level_name =</span> <span class="st">&quot;place&quot;</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a><span class="fu">nrow</span>(ld_place)</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a><span class="co">#&gt; [1] 31909</span></span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a></span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>ld_place <span class="ot">&lt;-</span> ld_place <span class="sc">|&gt;</span></span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a>  dplyr<span class="sc">::</span><span class="fu">filter</span>(type <span class="sc">==</span> <span class="st">&quot;city&quot;</span>)</span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>gd <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>  <span class="fu">set_level_data</span>(<span class="at">level_name =</span> <span class="st">&quot;place&quot;</span>,</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>                 <span class="at">data =</span> ld_place)</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>ld_place_2 <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>  <span class="fu">get_level_data</span>(<span class="at">level_name =</span> <span class="st">&quot;place&quot;</span>)</span>
+<span id="cb17-14"><a href="#cb17-14" tabindex="-1"></a><span class="fu">nrow</span>(ld_place_2)</span>
+<span id="cb17-15"><a href="#cb17-15" tabindex="-1"></a><span class="co">#&gt; [1] 10193</span></span></code></pre></div>
+<p>In this case we have only filtered it, we can also modify, delete or
+add attributes: it is checked that the key and foreign keys are still
+defined in the new table.</p>
 <p>For a level we can obtain the available geometries and a layer with
 the attribute configuration we want and the selected geometry.</p>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>gd <span class="sc">|&gt;</span></span>
-<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>  <span class="fu">get_level_geometries</span>(<span class="at">level_name =</span> <span class="st">&quot;state&quot;</span>)</span>
-<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;point&quot;   &quot;polygon&quot;</span></span>
-<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a></span>
-<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a>ll <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
-<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>  <span class="fu">get_level_layer</span>(<span class="at">level_name =</span> <span class="st">&quot;state&quot;</span>,</span>
-<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>                  <span class="at">geometry =</span> <span class="st">&quot;polygon&quot;</span>,</span>
-<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>                  <span class="at">only_key =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a></span>
-<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a><span class="fu">plot</span>(sf<span class="sc">::</span><span class="fu">st_shift_longitude</span>(ll))</span></code></pre></div>
-<p><img src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a>gd <span class="sc">|&gt;</span></span>
+<span id="cb18-2"><a href="#cb18-2" tabindex="-1"></a>  <span class="fu">get_level_geometries</span>(<span class="at">level_name =</span> <span class="st">&quot;division&quot;</span>)</span>
+<span id="cb18-3"><a href="#cb18-3" tabindex="-1"></a><span class="co">#&gt; [1] &quot;point&quot;   &quot;polygon&quot;</span></span>
+<span id="cb18-4"><a href="#cb18-4" tabindex="-1"></a></span>
+<span id="cb18-5"><a href="#cb18-5" tabindex="-1"></a>ll <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb18-6"><a href="#cb18-6" tabindex="-1"></a>  <span class="fu">get_level_layer</span>(<span class="at">level_name =</span> <span class="st">&quot;division&quot;</span>,</span>
+<span id="cb18-7"><a href="#cb18-7" tabindex="-1"></a>                  <span class="at">geometry =</span> <span class="st">&quot;polygon&quot;</span>,</span>
+<span id="cb18-8"><a href="#cb18-8" tabindex="-1"></a>                  <span class="at">only_key =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-9"><a href="#cb18-9" tabindex="-1"></a></span>
+<span id="cb18-10"><a href="#cb18-10" tabindex="-1"></a><span class="fu">plot</span>(sf<span class="sc">::</span><span class="fu">st_shift_longitude</span>(ll))</span></code></pre></div>
+<p><img src="data:image/png;base64,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" /><!-- --></p>
+<p>We can obtain a table with level data and geographic data represented
+in the form of points, with longitude and latitude, to be included in
+other tools that use this format.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a>ld_geo <span class="ot">&lt;-</span> gd <span class="sc">|&gt;</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>  <span class="fu">get_level_data_geo</span>(<span class="at">level_name =</span> <span class="st">&quot;division&quot;</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>pander<span class="sc">::</span><span class="fu">pandoc.table</span>(ld_geo, <span class="at">split.table =</span> <span class="cn">Inf</span>)</span></code></pre></div>
+<table>
+<colgroup>
+<col width="19%" />
+<col width="12%" />
+<col width="16%" />
+<col width="25%" />
+<col width="13%" />
+<col width="13%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="center">division_code</th>
+<th align="center">country</th>
+<th align="center">region_code</th>
+<th align="center">division_name</th>
+<th align="center">intptlon</th>
+<th align="center">intptlat</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="center">0</td>
+<td align="center">USA</td>
+<td align="center">9</td>
+<td align="center">Puerto Rico</td>
+<td align="center">-66.28</td>
+<td align="center">18.21</td>
+</tr>
+<tr class="even">
+<td align="center">1</td>
+<td align="center">USA</td>
+<td align="center">1</td>
+<td align="center">New England</td>
+<td align="center">-70.65</td>
+<td align="center">44.3</td>
+</tr>
+<tr class="odd">
+<td align="center">2</td>
+<td align="center">USA</td>
+<td align="center">1</td>
+<td align="center">Middle Atlantic</td>
+<td align="center">-77</td>
+<td align="center">42.01</td>
+</tr>
+<tr class="even">
+<td align="center">3</td>
+<td align="center">USA</td>
+<td align="center">2</td>
+<td align="center">East North Central</td>
+<td align="center">-86.79</td>
+<td align="center">42.89</td>
+</tr>
+<tr class="odd">
+<td align="center">4</td>
+<td align="center">USA</td>
+<td align="center">2</td>
+<td align="center">West North Central</td>
+<td align="center">-97.61</td>
+<td align="center">43.09</td>
+</tr>
+<tr class="even">
+<td align="center">5</td>
+<td align="center">USA</td>
+<td align="center">3</td>
+<td align="center">South Atlantic</td>
+<td align="center">-82.35</td>
+<td align="center">32.9</td>
+</tr>
+<tr class="odd">
+<td align="center">6</td>
+<td align="center">USA</td>
+<td align="center">3</td>
+<td align="center">East South Central</td>
+<td align="center">-88.02</td>
+<td align="center">34.77</td>
+</tr>
+<tr class="even">
+<td align="center">7</td>
+<td align="center">USA</td>
+<td align="center">3</td>
+<td align="center">West South Central</td>
+<td align="center">-98.85</td>
+<td align="center">31.59</td>
+</tr>
+<tr class="odd">
+<td align="center">8</td>
+<td align="center">USA</td>
+<td align="center">4</td>
+<td align="center">Mountain</td>
+<td align="center">-111</td>
+<td align="center">40.79</td>
+</tr>
+<tr class="even">
+<td align="center">9</td>
+<td align="center">USA</td>
+<td align="center">4</td>
+<td align="center">Pacific</td>
+<td align="center">-151</td>
+<td align="center">64.15</td>
+</tr>
+</tbody>
+</table>
 <p>In addition to these functions, the package offers the possibility to
-change the CRS of all the layers of a geodimension using the
-<code>transform_crs</code> function.</p>
+change the CRS of all the layers of a <em>geodimension</em> using the
+<code>transform_crs()</code> function.</p>
 </div>
 </div>
 <div id="conclusions" class="section level1">
@@ -759,13 +934,8 @@ also the layers with associated geographic information.</p>
 <hr />
 <ol>
 <li id="fn1"><p>Basic concepts of dimensional modelling and star schemas
-are presented in <a href="https://CRAN.R-project.org/package=starschemar"><code>starschemar</code></a>
+are presented in <a href="https://CRAN.R-project.org/package=rolap"><code>rolap</code></a>
 vignettes.<a href="#fnref1" class="footnote-back">↩︎</a></p></li>
-<li id="fn2"><p>To take up less space in the package, its geometry has
-also been simplified.<a href="#fnref2" class="footnote-back">↩︎</a></p></li>
-<li id="fn3"><p>For our example, this is not a problem, just a warning
-that we must pay attention when we select the cities, to determine if
-any are repeated.<a href="#fnref3" class="footnote-back">↩︎</a></p></li>
 </ol>
 </div>
 

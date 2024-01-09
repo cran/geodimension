@@ -22,16 +22,25 @@ add_geometry(gl, layer, layer_key, level_key)
 A \code{geolevel}.
 }
 \description{
-A level can have several geometries (\emph{point}, \emph{polygon} or \emph{line}). This
-function adds the geometry of the layer to the level.
+A level can have several geometries (\emph{point} or \emph{polygon}). This function adds
+the geometry of the layer to the level.
 }
 \details{
-The association of the geometry to the existing instances is done through
-join using the level and layer keys.
+The association of the geometry to the existing instances is done through join
+using the level and layer keys.
 
 If none is indicated, by default the key defined in the level is considered.
 }
 \examples{
+
+layer_us_state <-
+  dplyr::inner_join(
+    get_level_data_geo(gd_us, "state"),
+    get_level_layer(gd_us, "state"),
+    by = c("statefp", "division", "region", "stusps", "name")
+  ) |>
+  sf::st_as_sf()
+
 us_state_point <-
   coordinates_to_geometry(layer_us_state,
                           lon_lat = c("intptlon", "intptlat"))
@@ -39,12 +48,20 @@ us_state_point <-
 state <-
   geolevel(name = "state",
            layer = layer_us_state,
-           key = c("geoid")) |>
+           key = "statefp",
+           snake_case = TRUE) |>
   add_geometry(layer = us_state_point)
 
 }
 \seealso{
+\code{\link{geodimension}}, \code{\link{relate_levels}}
+
 Other geolevel definition functions: 
-\code{\link{geolevel}()}
+\code{\link{check_key}()},
+\code{\link{complete_point_geometry}()},
+\code{\link{coordinates_to_geometry}()},
+\code{\link{geolevel}()},
+\code{\link{get_empty_geometry_instances}()},
+\code{\link{get_geometry}()}
 }
 \concept{geolevel definition functions}

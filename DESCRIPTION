@@ -1,10 +1,12 @@
 Type: Package
 Package: geodimension
 Title: Definition of Geographic Dimensions
-Version: 1.0.2
-Authors@R: 
-    person("Jose", "Samos", , "jsamos@ugr.es", role = c("aut", "cre", "cph"),
-           comment = c(ORCID = "0000-0002-4457-3439"))
+Version: 2.0.0
+Authors@R: c(
+    person("Jose", "Samos", , "jsamos@ugr.es", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-4457-3439")),
+    person("Universidad de Granada", role = "cph")
+  )
 Description: The geographic dimension plays a fundamental role in
     multidimensional systems. To define a geographic dimension in a star
     schema, we need a table with attributes corresponding to the levels of
@@ -19,17 +21,18 @@ URL: https://josesamos.github.io/geodimension/,
         https://github.com/josesamos/geodimension
 BugReports: https://github.com/josesamos/geodimension/issues
 Depends: R (>= 2.10)
-Imports: dplyr, generics, methods, rlang, sf, snakecase, tibble,
-        tidyselect
+Imports: dplyr, methods, sf, snakecase, tibble, tidyselect
 Suggests: knitr, pander, rmarkdown, testthat
 VignetteBuilder: knitr
 Encoding: UTF-8
 Language: en-GB
 LazyData: true
+LazyDataCompression: xz
 RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2023-12-02 08:06:28 UTC; joses
-Author: Jose Samos [aut, cre, cph] (<https://orcid.org/0000-0002-4457-3439>)
+Packaged: 2024-01-08 16:43:50 UTC; joses
+Author: Jose Samos [aut, cre] (<https://orcid.org/0000-0002-4457-3439>),
+  Universidad de Granada [cph]
 Maintainer: Jose Samos <jsamos@ugr.es>
 Repository: CRAN
-Date/Publication: 2023-12-02 08:20:02 UTC
+Date/Publication: 2024-01-09 00:00:02 UTC

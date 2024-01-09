@@ -17,6 +17,6 @@ gd_us
 \code{geodimension} obtained from vector layers over USA.
 }
 \details{
-It includes the levels city, county, state, region, division and nation.
+It includes the levels place, county, state, division, region and country.
 }
 \keyword{datasets}

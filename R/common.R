@@ -12,13 +12,17 @@
 #'
 #' @return A string.
 #'
-#' @family level definition functions
+#' @family geolevel definition functions
 #'
 #' @examples
-#' geometry <- get_geometry(layer_us_region)
+#'
+#' layer_us_county <- get_level_layer(gd_us, "county")
+#'
+#' geometry <- get_geometry(layer_us_county)
 #'
 #' @export
 get_geometry <- function(layer) {
+  layer <- sf::st_as_sf(layer)
   geo <- unique(as.character(sf::st_geometry_type(layer, by_geometry = TRUE)))
   if (length(intersect(geo, c("CIRCULARSTRING", "CURVEPOLYGON", "MULTIPOLYGON", "TRIANGLE", "POLYGON"))) > 0) {
     return("polygon")
@@ -44,19 +48,21 @@ get_geometry <- function(layer) {
 #'
 #' @return A boolean.
 #'
-#' @family level definition functions
+#' @family geolevel definition functions
 #'
 #' @examples
-#' is_key <- check_key(layer_us_region, key = c("name"))
+#'
+#' layer_us_county <- get_level_layer(gd_us, "county")
+#'
+#' is_key <- check_key(layer_us_county, key = c("statefp", "name"))
 #'
 #' @export
 check_key <- function(table, key = NULL) {
   if ("sf" %in% class(table)) {
     table <- tibble::tibble((sf::st_drop_geometry(table)))
   }
-  stopifnot(!is.null(key))
-  key <- unique(key)
-  stopifnot(key %in% names(table))
+  stopifnot("The attributes that make up the key need to be indicated." = !is.null(key))
+  key <- validate_names(names(table), key, 'attribute')
 
   table_key <- table |>
     dplyr::select(tidyselect::all_of(key)) |>
@@ -76,9 +82,7 @@ check_key <- function(table, key = NULL) {
 #'
 #' If we start from a geographic layer, it initially transforms it into a table.
 #'
-#' The CRS of the new layer is indicated. If a CRS is not indicated, it
-#' considers the layer's CRS by default and, if it is not a layer, it considers
-#' 4326 CRS (WGS84).
+#' The CRS of the new layer is indicated. By default, it considers 4326 (WGS84).
 #'
 #' @param table A `tibble` object.
 #' @param lon_lat A vector, name of longitude and latitude attributes.
@@ -87,34 +91,131 @@ check_key <- function(table, key = NULL) {
 #'
 #' @return A `sf` object.
 #'
-#' @family level definition functions
+#' @family geolevel definition functions
 #'
 #' @examples
-#' us_state_point <-
-#'   coordinates_to_geometry(layer_us_state,
+#'
+#' layer_us_county <-
+#'   dplyr::inner_join(
+#'     get_level_data_geo(gd_us, "county"),
+#'     get_level_layer(gd_us, "county"),
+#'     by = c("geoid", "statefp", "name", "type")
+#'   ) |>
+#'   sf::st_as_sf()
+#'
+#' us_county_point <-
+#'   coordinates_to_geometry(layer_us_county,
 #'                           lon_lat = c("intptlon", "intptlat"))
 #'
 #' @export
-coordinates_to_geometry <- function(table, lon_lat = NULL, crs = NULL) {
+coordinates_to_geometry <- function(table, lon_lat = c("intptlon", "intptlat"), crs = 4326) {
   if ("sf" %in% class(table)) {
-    if (is.null(crs)) {
-      crs <- sf::st_crs(table)
-    }
     table <- tibble::tibble((sf::st_drop_geometry(table)))
   }
-  stopifnot(!is.null(lon_lat))
   lon_lat <- unique(lon_lat)
-  stopifnot(length(lon_lat) == 2)
-  stopifnot(lon_lat %in% names(table))
+  stopifnot("Two attributes must be indicated: longitude and latitude." = length(lon_lat) == 2)
+  names <- names(table)
+  lon <- grep(lon_lat[1], names, ignore.case = TRUE)
+  lat <- grep(lon_lat[2], names, ignore.case = TRUE)
+  stopifnot("Two attributes of the table must be indicated." = length(lon) > 0 & length(lat) > 0)
   if (is.null(crs)) {
     crs <- 4326 # WGS84
   }
 
   table |>
     sf::st_as_sf(
-      coords = lon_lat,
+      coords = names[c(lon, lat)],
       crs = crs,
       remove = TRUE
     )
+}
+
+# -----------------------------------------------------------------------
+
+#' Validate names
+#'
+#' @param defined_names A vector of strings, defined attribute names.
+#' @param names A vector of strings, new attribute names.
+#' @param concept A string, treated concept.
+#' @param repeated A boolean, repeated names allowed.
+#'
+#' @return A vector of strings, names.
+#'
+#' @keywords internal
+validate_names <- function(defined_names, names, concept = 'name', repeated = FALSE) {
+  if (length(names) == 0) {
+    names <- defined_names
+  } else {
+    if (!repeated) {
+      stopifnot("There are repeated values." = length(names) == length(unique(names)))
+    }
+    for (name in names) {
+      if (!(name %in% defined_names)) {
+        stop(sprintf(
+          "'%s' is not defined as %s.",
+          name, concept
+        ))
+      }
+    }
+  }
+  names
+}
+
+
+#' To snake case
+#'
+#' @param str A string.
+#'
+#' @return A vector of strings.
+#'
+#' @keywords internal
+my_to_snake_case <- function(str) {
+  if (!is.null(str)) {
+    str <- snakecase::to_snake_case(str)
+  }
+  str
+}
+
+
+#' Add prefix
+#'
+#' @param str A string.
+#' @param prefix A string.
+#'
+#' @return A string.
+#'
+#' @keywords internal
+add_prefix <- function(str, prefix) {
+  if (!is.null(str)) {
+    str <- paste0(prefix, '_', str)
+    str <- gsub(paste0(prefix, '_', prefix, '_'), paste0(prefix, '_'), str)
+    str <- gsub(paste0(prefix, '_', prefix), prefix, str)
+  }
+  str
+}
+
+
+
+#' All attributes are character
+#'
+#' @param instances A tibble.
+#'
+#' @return A tibble.
+#'
+#' @keywords internal
+all_attributes_character <- function(instances) {
+  n_row <- nrow(instances)
+  attributes <- names(instances)
+  # all attributes of type character
+  instances[, attributes] <-
+    data.frame(lapply(instances[, attributes, drop = FALSE], as.character),
+               stringsAsFactors = FALSE)
+
+  if (n_row == 1) {
+    instances <- tibble::as_tibble_row(instances)
+  } else {
+    instances <- tibble::as_tibble(instances)
+  }
+  instances
 }
 
